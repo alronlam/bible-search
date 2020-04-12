@@ -23,6 +23,7 @@ docutils==0.15.2          # via botocore
 entrypoints==0.3          # via altair, nbconvert
 enum-compat==0.0.3        # via streamlit
 future==0.18.2            # via streamlit
+h5py==2.10.0
 idna==2.9                 # via requests
 importlib-metadata==1.6.0  # via jsonschema
 ipykernel==5.2.0          # via ipywidgets, notebook, pydeck
@@ -42,7 +43,7 @@ nbconvert==5.6.1          # via notebook
 nbformat==5.0.5           # via ipywidgets, nbconvert, notebook
 nltk==3.4.5               # via sentence-transformers
 notebook==6.0.3           # via widgetsnbextension
-numpy==1.18.2             # via altair, pandas, pydeck, scikit-learn, scipy, sentence-transformers, streamlit, transformers
+numpy==1.18.2
 packaging==20.3           # via streamlit
 pandas==1.0.3
 pandocfilters==1.4.2      # via nbconvert
@@ -71,7 +72,7 @@ scipy==1.4.1              # via scikit-learn, sentence-transformers
 send2trash==1.5.0         # via notebook
 sentence-transformers==0.2.5.1
 sentencepiece==0.1.85     # via transformers
-six==1.14.0               # via bleach, jsonschema, nltk, packaging, protobuf, pyrsistent, python-dateutil, sacremoses, traitlets, validators
+six==1.14.0               # via bleach, h5py, jsonschema, nltk, packaging, protobuf, pyrsistent, python-dateutil, sacremoses, traitlets, validators
 sklearn==0.0
 streamlit==0.57.3
 terminado==0.8.3          # via notebook
