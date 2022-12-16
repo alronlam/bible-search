@@ -13,7 +13,8 @@ from transformers import pipeline
 
 # Data + Embeddings
 
-MODEL_NAME = "distilbert-base-nli-stsb-mean-tokens"
+# MODEL_NAME = "distilbert-base-nli-stsb-mean-tokens"
+MODEL_NAME = "msmarco-distilbert-base-v4"
 
 
 def hash_st(st):
@@ -55,7 +56,7 @@ def embed_or_load_dataset(texts, version):
 
 
 @st.cache
-def read_data(bible_csv, book_csv):
+def read_data(bible_csv, book_csv, agg_chapter=True):
     book_df = pd.read_csv(book_csv)
     verses_df = pd.read_csv(bible_csv)
     df = pd.merge(verses_df, book_df, on="b")
@@ -68,6 +69,14 @@ def read_data(bible_csv, book_csv):
     df["source"] = df.apply(
         lambda row: f"{row['book']} {row['chapter']}:{row['verse']}", axis=1
     )
+
+    if agg_chapter:
+        df = df.groupby(['book', 'chapter'])['text'].apply(' '.join).reset_index()
+        df["source"] = df.apply(lambda row: f"{row['book']} {row['chapter']}", axis=1)
+    else:
+        df["source"] = df.apply(
+            lambda row: f"{row['book']} {row['chapter']}:{row['verse']}", axis=1
+        )
 
     return df
 
@@ -149,5 +158,5 @@ def main():
             st.table(results)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  
     main()
