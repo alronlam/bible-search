@@ -1,6 +1,8 @@
 h5py
 numpy
 pandas
-sentence-transformers
+protobuf~=3.19.0
+sentence-transformers==0.3.2
 sklearn
-streamlit
+streamlit==1.8.*
+torch==1.4.0
