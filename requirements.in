@@ -1,8 +1,11 @@
+black
 h5py
 numpy
 pandas
 protobuf~=3.19.0
-sentence-transformers==0.3.2
+sentence-transformers==2.2.*
 sklearn
+sparse_dot_topn
 streamlit==1.8.*
-torch==1.4.0
+torch==1.13.*
+transformers==4.25.*
