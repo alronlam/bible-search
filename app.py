@@ -8,6 +8,7 @@ import pandas as pd
 import sklearn
 import streamlit as st
 from sentence_transformers import SentenceTransformer
+from sentence_transformers import CrossEncoder
 
 from transformers import pipeline
 
@@ -19,15 +20,25 @@ import urllib.parse
 
 # MODEL_NAME = "distilbert-base-nli-stsb-mean-tokens"
 MODEL_NAME = "msmarco-distilbert-base-v4"
+CROSS_ENCODER = "cross-encoder/ms-marco-MiniLM-L-12-v2"
 
 
 def hash_st(st):
     return MODEL_NAME
 
 
+def hash_ce(ce):
+    return CROSS_ENCODER
+
+
 @st.cache(hash_funcs={SentenceTransformer: hash_st})
 def get_embedder():
     return SentenceTransformer(MODEL_NAME)
+
+
+@st.cache(hash_funcs={CrossEncoder: hash_ce})
+def get_cross_encoder():
+    return CrossEncoder(CROSS_ENCODER)
 
 
 @st.cache
@@ -134,7 +145,7 @@ def config():
     st.sidebar.subheader("Search config")
     version = st.sidebar.selectbox("Bible Version:", list(version_map.keys()))
     n_results = st.sidebar.number_input(
-        "# Results", min_value=1, max_value=None, value=30
+        "# Results", min_value=1, max_value=None, value=10
     )
 
     st.sidebar.subheader("Debug config")
@@ -149,7 +160,7 @@ def config():
     )
 
     # Tf-Idf Retriever
-    use_tfidf_retriever = st.sidebar.checkbox("Tf-Idf Retriever", value=True)
+    use_tfidf_retriever = st.sidebar.checkbox("Tf-Idf Retriever", value=False)
     use_semantic_verse_retriever = st.sidebar.checkbox(
         "Semantic Verse Retriever", value=True
     )
@@ -166,6 +177,111 @@ def config():
     )
 
 
+def cross_encoder_rerank(candidates, cross_encoder, query):
+    all_results = []
+
+    scores = cross_encoder.predict(
+        [(query, candidate["text"]) for idx, candidate in candidates.iterrows()]
+    )
+    candidates["score"] = scores
+    candidates = candidates.sort_values(by="score", ascending=False)
+
+    # Create result dicts
+    for idx, candidate in candidates.iterrows():
+        biblegateway_url = urllib.parse.quote(
+            f"www.biblegateway.com/passage/?search={candidate['book']} {candidate['chapter']}&version=NIV"
+        )
+        result = {
+            "source": candidate["source"],
+            "url": biblegateway_url,
+            "score": candidate["score"],
+            "formatted_text": candidate["text"],  # TODO highlight relevant verses
+            "raw_verse_results": candidate,
+        }
+        all_results.append(result)
+
+    return all_results
+
+
+def semantic_sim_rerank(
+    candidate_chapters,
+    per_verse_df,
+    embeddings,
+    query,
+    threshold,
+    highlight_verses=True,
+    rerank=True,
+):
+
+    all_results = []
+
+    for idx, candidate in candidate_chapters.iterrows():
+        # Filter the embeddings and verses to the chapter match
+        book_mask = per_verse_df["book"] == candidate["book"]
+        chapter_mask = per_verse_df["chapter"] == candidate["chapter"]
+        target_chapter_df = per_verse_df[book_mask & chapter_mask]
+
+        # Get embeddings corresponding to the book/chapter verse indices
+        target_embeddings = embeddings[target_chapter_df.index.tolist()]
+
+        # Perform semantic search per chapter
+        chapter_results = search(
+            query,
+            target_chapter_df["text"].tolist(),
+            target_embeddings,
+            return_df=True,
+            n=len(target_chapter_df),
+            threshold=threshold,
+        )
+        weight_max = 1
+        weight_mean = 1 - weight_max
+        score = (
+            weight_max * chapter_results["score"].max()
+            + weight_mean * chapter_results["score"].mean()
+        )
+
+        # Count verses that meet the threshold
+        relevant_verses = chapter_results[chapter_results["score"] >= threshold]
+        num_relevant_verses = len(relevant_verses)
+
+        # Highlight verses that meet the threshold
+        formatted_text = candidate["text"]
+        if highlight_verses:
+
+            for _, text in relevant_verses.iterrows():
+                formatted_text = formatted_text.replace(
+                    text["text"],
+                    f'<span style="color:green">{text["text"]}</span>',
+                )
+
+        # Create a dict to store the results
+        biblegateway_url = urllib.parse.quote(
+            f"www.biblegateway.com/passage/?search={candidate['book']} {candidate['chapter']}&version=NIV"
+        )
+        result = {
+            "source": candidate["source"],
+            "url": biblegateway_url,
+            "num_relevant_verses": num_relevant_verses,
+            "score": score,
+            "formatted_text": formatted_text,
+            "raw_verse_results": chapter_results,
+        }
+
+        if score > 0:
+            all_results.append(result)
+
+    if rerank:
+        all_results = sorted(
+            all_results,
+            key=lambda x: (x["num_relevant_verses"], x["score"]),
+            reverse=True,
+        )
+    # Trim down to specified n_results (can exceed due to multiple retriever approaches)
+    # all_results = all_results[:n_results]s
+
+    return all_results
+
+
 # Main
 
 
@@ -180,6 +296,7 @@ def main():
         use_tfidf_retriever,
         use_semantic_verse_retriever,
     ) = config()
+    THRESHOLD = 0.4
 
     # Load Data
     bible_path = ROOT_DIR / f"data/{version_map[version]}"
@@ -188,6 +305,7 @@ def main():
     per_chapter_df = read_data(bible_path, book_path, agg_chapter=True)
 
     retriever = Retriever(per_chapter_df["text"].tolist())
+    cross_encoder = get_cross_encoder()
 
     # Embed texts
     all_verses = per_verse_df["text"].tolist()
@@ -214,7 +332,7 @@ def main():
                 candidates = pd.concat([candidates, tfidf_candidates])
                 if debug_mode:
                     st.header("Chapter Search (Tf-Idf per Chapter)")
-                    st.write(tfidf_candidates[["source", "score"]])
+                    st.write(tfidf_candidates)
 
             if use_semantic_verse_retriever:
                 # Retrieve based on verse similarity
@@ -225,8 +343,8 @@ def main():
                     per_verse_df["text"].tolist(),
                     embeddings,
                     return_df=True,
-                    n=n_results * 3,
-                    threshold=0.5,
+                    n=n_results * 2,
+                    threshold=THRESHOLD,
                 )
                 verse_results = format_results(verse_results, per_verse_df)
                 if debug_mode:
@@ -272,70 +390,30 @@ def main():
                 st.write(f"Candidate chapters: {sorted(candidates['source'].tolist())}")
 
             # RE-RANK ACCORDING TO SEMANTIC SEARCH
+            # all_results = semantic_sim_rerank(
+            #     candidates, per_verse_df, embeddings, query, THRESHOLD
+            # )
 
-            all_results = []
-
-            for idx, candidate in candidates.iterrows():
-                # Filter the embeddings and verses to the chapter match
-                book_mask = per_verse_df["book"] == candidate["book"]
-                chapter_mask = per_verse_df["chapter"] == candidate["chapter"]
-                target_chapter_df = per_verse_df[book_mask & chapter_mask]
-
-                # Get embeddings corresponding to the book/chapter verse indices
-                target_embeddings = embeddings[target_chapter_df.index.tolist()]
-
-                # Perform semantic search per chapter
-                chapter_results = search(
-                    query,
-                    target_chapter_df["text"].tolist(),
-                    target_embeddings,
-                    return_df=True,
-                    n=5,
-                    threshold=0.5,
-                )
-                max_score = chapter_results["score"].max()
-
-                # Highlight verses that meet the threshold
-                formatted_text = candidate["text"]
-                for _, text in chapter_results.iterrows():
-                    formatted_text = formatted_text.replace(
-                        text["text"],
-                        f'<span style="color:green">{text["text"]}</span>',
-                    )
-
-                # Do this only if
-                # Create a dict to store the results
-                biblegateway_url = urllib.parse.quote(
-                    f"www.biblegateway.com/passage/?search={candidate['book']} {candidate['chapter']}&version=NIV"
-                )
-                result = {
-                    "source": candidate["source"],
-                    "url": biblegateway_url,
-                    "score": max_score,
-                    "formatted_text": formatted_text,
-                    "raw_verse_results": chapter_results,
-                }
-
-                if max_score > 0:
-                    all_results.append(result)
-
-            all_results = sorted(all_results, key=lambda x: x["score"], reverse=True)
-            # Trim down to specified n_results (can exceed due to multiple retriever approaches)
-            all_results = all_results[:n_results]
+            all_results = cross_encoder_rerank(
+                candidates,
+                cross_encoder,
+                query,
+            )
 
             if len(all_results) == 0:
                 st.write("No results. Please try paraphrasing your query.")
             else:
                 for idx, result in enumerate(all_results):
                     st.write("---")
-                    # st.write(result)
-                    # st.write(f"### Result {idx+1} / {len(all_results)}:")
                     st.write(
-                        f"#### [Result {idx+1} / {len(all_results)}] [{result['source']}]({result['url']})"
+                        f"#### [Result {idx+1} / {len(all_results)}] [{result['source']}]({result['url']}) ({result['score']:.2%})"
                     )
+
                     st.markdown(result["formatted_text"], unsafe_allow_html=True)
                     if debug_mode:
-                        st.table(result["raw_verse_results"])
+                        # if "raw_verse_results" in result.keys():
+                        #     st.write(result["raw_verse_results"])
+                        pass
 
 
 if __name__ == "__main__":
