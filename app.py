@@ -179,15 +179,51 @@ def config():
 
 
 def cross_encoder_rerank(
-    candidates, cross_encoder, query, per_verse_df, embeddings, threshold=0.5
+    candidates,
+    cross_encoder,
+    query,
+    per_verse_df,
+    embeddings,
+    semantic_threshold=0,
+    cross_encoder_threshold=0,
 ):
     all_results = []
 
+    # Create texts that are semantically relevant enough to the query
+    highlighted_texts = []
+    for idx, candidate in candidates.iterrows():
+        # Highlight verses that meet the threshold
+        # Filter the embeddings and verses to the chapter match
+        book_mask = per_verse_df["book"] == candidate["book"]
+        chapter_mask = per_verse_df["chapter"] == candidate["chapter"]
+        target_chapter_df = per_verse_df[book_mask & chapter_mask]
+
+        # Get embeddings corresponding to the book/chapter verse indices
+        target_embeddings = embeddings[target_chapter_df.index.tolist()]
+
+        # Perform semantic search per chapter
+        relevant_verses = search(
+            query,
+            target_chapter_df["text"].tolist(),
+            target_embeddings,
+            return_df=True,
+            n=len(target_chapter_df),
+            threshold=semantic_threshold,
+        )
+        highlighted_texts.append(" ".join(relevant_verses["text"].tolist()))
+
+    candidates["highlighted_text"] = highlighted_texts
+
     scores = cross_encoder.predict(
-        [(query, candidate["text"]) for idx, candidate in candidates.iterrows()]
+        [
+            (query, candidate["highlighted_text"])
+            for idx, candidate in candidates.iterrows()
+        ]
     )
     candidates["score"] = scores
     candidates = candidates.sort_values(by="score", ascending=False)
+    if cross_encoder_threshold is not None:
+        candidates = candidates[candidates["score"] >= cross_encoder_threshold]
 
     # Create result dicts
     for idx, candidate in candidates.iterrows():
@@ -208,8 +244,8 @@ def cross_encoder_rerank(
             target_embeddings,
             return_df=True,
             n=len(target_chapter_df),
-            threshold=threshold,
-        )[:5]
+            threshold=semantic_threshold,
+        )
 
         formatted_text = candidate["text"]
         for _, text in relevant_verses.iterrows():
@@ -306,8 +342,6 @@ def semantic_sim_rerank(
             key=lambda x: (x["num_relevant_verses"], x["score"]),
             reverse=True,
         )
-    # Trim down to specified n_results (can exceed due to multiple retriever approaches)
-    all_results = all_results[:n_results]
 
     return all_results
 
@@ -326,7 +360,8 @@ def main():
         use_tfidf_retriever,
         use_semantic_verse_retriever,
     ) = config()
-    THRESHOLD = 0.4
+    SEM_SEARCH_THRESHOLD = 0.4
+    CROSS_ENCODER_THRESHOLD = None
 
     # Load Data
     bible_path = ROOT_DIR / f"data/{version_map[version]}"
@@ -374,7 +409,7 @@ def main():
                     embeddings,
                     return_df=True,
                     n=n_results * 2,
-                    threshold=THRESHOLD,
+                    threshold=SEM_SEARCH_THRESHOLD,
                 )
                 verse_results = format_results(verse_results, per_verse_df)
                 if debug_mode:
@@ -430,8 +465,11 @@ def main():
                 query,
                 per_verse_df,
                 embeddings,
-                threshold=THRESHOLD,
+                semantic_threshold=SEM_SEARCH_THRESHOLD,
+                cross_encoder_threshold=CROSS_ENCODER_THRESHOLD,
             )
+            # Trim down to specified n_results (can exceed due to multiple retriever approaches)
+            all_results = all_results[:n_results]
 
             if len(all_results) == 0:
                 st.write("No results. Please try paraphrasing your query.")
