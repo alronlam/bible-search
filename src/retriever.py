@@ -4,7 +4,7 @@ from sparse_dot_topn import awesome_cossim_topn
 
 class Retriever:
     def __init__(self, texts, preprocessors=[]) -> None:
-        self.vectorizer = TfidfVectorizer()
+        self.vectorizer = TfidfVectorizer(analyzer='word',stop_words= 'english')
         self.preprocessors = preprocessors
         # TODO: pre-process the texts
         self.tfidf_vectors = self.vectorizer.fit_transform(texts)
