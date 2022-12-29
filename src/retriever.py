@@ -1,10 +1,21 @@
+import abc
+from typing import List
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sparse_dot_topn import awesome_cossim_topn
 
+from src.models import Chapter
+
 
 class Retriever:
+    @abc.abstractmethod
+    def retrieve(self, query, n=10) -> List[Chapter]:
+        pass
+
+
+class SemanticRetriever(Retriever):
     def __init__(self, texts, preprocessors=[]) -> None:
-        self.vectorizer = TfidfVectorizer(analyzer='word',stop_words= 'english')
+        self.vectorizer = TfidfVectorizer(analyzer="word", stop_words="english")
         self.preprocessors = preprocessors
         # TODO: pre-process the texts
         self.tfidf_vectors = self.vectorizer.fit_transform(texts)

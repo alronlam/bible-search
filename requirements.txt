@@ -58,6 +58,8 @@ importlib-metadata==5.1.0
     #   transformers
 importlib-resources==5.10.1
     # via jsonschema
+isort==5.11.4
+    # via -r requirements.in
 jinja2==3.1.2
     # via
     #   altair
@@ -125,6 +127,8 @@ protobuf==3.19.6
     #   streamlit
 pyarrow==10.0.1
     # via streamlit
+pydantic==1.10.2
+    # via -r requirements.in
 pydeck==0.8.0
     # via streamlit
 pympler==1.0.1
@@ -214,6 +218,7 @@ typing-extensions==4.4.0
     #   huggingface-hub
     #   importlib-metadata
     #   jsonschema
+    #   pydantic
     #   streamlit
     #   torch
     #   torchvision

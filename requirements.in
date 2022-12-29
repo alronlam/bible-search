@@ -1,8 +1,10 @@
 black
 h5py
+isort
 numpy
 pandas
 protobuf~=3.19.0
+pydantic
 sentence-transformers==2.2.*
 sklearn
 sparse_dot_topn
