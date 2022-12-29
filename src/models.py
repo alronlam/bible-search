@@ -7,3 +7,6 @@ class Chapter(BaseModel):
     book_name: str
     chapter_num: int
     verses_df: pd.DataFrame
+
+    class Config:
+        arbitrary_types_allowed = True

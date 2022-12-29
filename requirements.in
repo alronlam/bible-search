@@ -1,6 +1,7 @@
 black
 h5py
 isort
+loguru
 numpy
 pandas
 protobuf~=3.19.0

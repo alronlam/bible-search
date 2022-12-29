@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import streamlit as st
 
 from src import bible_loader
@@ -12,16 +15,29 @@ def display_chapter(chapter):
 
 def main():
 
+    # Config
+    ROOT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
+    DATA_DIR = ROOT_DIR / "data"
+
+    n_results = 10
+    n_candidates = n_results * 2
+    metadata_csv = DATA_DIR / "key_english.csv"
+    verses_csv = DATA_DIR / "NIV.csv"
+    bible_version = "NIV"
+
+    semantic_sim_model = "msmarco-distilbert-base-v4"
+
     # Initialize / Index
-    bible_df = bible_loader.load_bible()
-    embeddings_manager = EmbeddingsManager()
+    bible_df = bible_loader.load_bible(metadata_csv, verses_csv)
+    embeddings_manager = EmbeddingsManager(
+        model_name=semantic_sim_model,
+        bible_version=bible_version,
+        embeddings_cache_dir=DATA_DIR,
+        texts=bible_df["text"].tolist(),
+    )
 
     retriever = Retriever()
     reranker = Reranker()
-
-    # Config
-    n_results = 10
-    n_candidates = n_results * 2
 
     # Get user input
     st.title("According to the Bible, ...")
