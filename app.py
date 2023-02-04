@@ -5,7 +5,12 @@ import streamlit as st
 
 from src import bible_loader
 from src.embeddings import EmbeddingsManager
-from src.reranker import MaxVerseReranker, Reranker
+from src.reranker import (
+    CombinedScoreAndNumberReranker,
+    MaxVerseReranker,
+    Reranker,
+    SemanticSimScoreReranker,
+)
 from src.retriever import Retriever, SemanticRetriever
 
 
@@ -40,7 +45,9 @@ def main():
     )
 
     retriever = SemanticRetriever(bible_df, embeddings_manager)
-    reranker = MaxVerseReranker()
+    # reranker = MaxVerseReranker()
+    reranker = CombinedScoreAndNumberReranker()
+    # reranker = SemanticSimScoreReranker()
 
     # DEBUG st.write(bible_df)
 
