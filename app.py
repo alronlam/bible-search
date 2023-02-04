@@ -6,11 +6,12 @@ import streamlit as st
 from src import bible_loader
 from src.embeddings import EmbeddingsManager
 from src.reranker import Reranker
-from src.retriever import Retriever
+from src.retriever import Retriever, SemanticRetriever
 
 
 def display_chapter(chapter):
-    pass
+    # TODO
+    st.write(str(chapter))
 
 
 def main():
@@ -36,8 +37,10 @@ def main():
         texts=bible_df["text"].tolist(),
     )
 
-    retriever = Retriever()
+    retriever = SemanticRetriever(bible_df, embeddings_manager)
     reranker = Reranker()
+
+    # DEBUG st.write(bible_df)
 
     # Get user input
     st.title("According to the Bible, ...")

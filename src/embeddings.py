@@ -44,7 +44,11 @@ class EmbeddingsManager:
         )
 
     def get_embeddings(self, texts):
-        embeddings = [self.text_emb_dict[text] for text in texts]
+        embeddings = []
+        for text in texts:
+            if text not in self.text_emb_dict:
+                self.text_emb_dict[text] = self.model.encode([text])[0]
+            embeddings.append(self.text_emb_dict[text])
         return embeddings
 
     def __str__(self):
