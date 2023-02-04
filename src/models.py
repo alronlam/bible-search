@@ -31,7 +31,6 @@ class Chapter(BaseModel):
 
     def get_biblegateway_url(self, version="NIV"):
         return f"https://www.biblegateway.com/passage/?search={urllib.parse.quote(self.book_name)}+{self.chapter_num}&version={version}"
-        
 
     def get_num_unique_highlight_verse(self):
         return len(self.highlight_verses_df.drop_duplicates(subset="text"))

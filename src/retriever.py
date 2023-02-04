@@ -1,10 +1,13 @@
 import abc
 from typing import List
 
+import numpy as np
 import pandas as pd
 import sklearn
 import streamlit as st
+from sentence_transformers.cross_encoder import CrossEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import MinMaxScaler
 from sparse_dot_topn import awesome_cossim_topn
 
 from src.models import Chapter
@@ -17,10 +20,22 @@ class Retriever:
 
 
 class SemanticRetriever:
-    def __init__(self, bible_df, embeddings_manager, threshold=0.4):
+    def __init__(
+        self,
+        bible_df,
+        embeddings_manager,
+        threshold=0.4,
+        cross_encoder_model="cross-encoder/ms-marco-MiniLM-L-12-v2",
+    ):
         self.bible_df = bible_df
         self.embeddings_manager = embeddings_manager
         self.threshold = threshold
+        self.cross_encoder_model = (
+            CrossEncoder(cross_encoder_model) if cross_encoder_model else None
+        )
+
+        # 'cross-encoder/stsb-distilroberta-base'
+        # cross-encoder/ms-marco-MiniLM-L-12-v2
 
     def retrieve(self, query, n=10) -> List[Chapter]:
 
@@ -31,6 +46,11 @@ class SemanticRetriever:
             n=n * 2,
             threshold=self.threshold,
         )
+
+        if self.cross_encoder_model is not None:
+            verse_candidates_df = self.cross_encode(
+                query, verse_candidates_df["text"].tolist()
+            )
 
         # TODO: revisit this logic as some verses can have the same exact text
         # For now, workaround is to drop duplicates
@@ -47,6 +67,16 @@ class SemanticRetriever:
             self.bible_df, verse_candidates_df
         )
         return chapter_candidates
+
+    def cross_encode(self, query, texts):
+        combinations = [[query, text] for text in texts]
+        sim_scores = self.cross_encoder_model.predict(combinations)
+        sim_scores = MinMaxScaler().fit_transform(sim_scores.reshape(-1, 1)).flatten()
+        reranked_texts_scores = sorted(
+            zip(texts, sim_scores), key=lambda x: x[1], reverse=True
+        )
+        df = pd.DataFrame(reranked_texts_scores, columns=["text", "score"])
+        return df
 
     def semantic_search(self, query, texts, embeddings_manager, n=None, threshold=0):
         embeddings = embeddings_manager.get_embeddings(texts)

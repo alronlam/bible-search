@@ -27,28 +27,14 @@ class CombinedScoreAndNumberReranker(Reranker):
         self.semantic_sim_weight = semantic_sim_weight
 
     def rerank(self, chapters: List[Chapter]) -> List[Chapter]:
-        num_verse_score = self.compute_num_verse_scores(chapters)
-        max_sem_sim_score = self.compute_sem_sim_scores(chapters)
+        num_verse_score = compute_num_verse_scores(chapters)
+        max_sem_sim_score = compute_sem_sim_scores(chapters)
 
         final_scores = (
             self.num_verse_weight * num_verse_score
             + self.semantic_sim_weight * max_sem_sim_score
         )
         return sort_chapters(chapters, final_scores)
-
-    def compute_num_verse_scores(self, chapters):
-        num_verses = np.array(
-            [chapter.get_num_unique_highlight_verse() for chapter in chapters]
-        )
-        max_verses = max(num_verses)
-        num_verse_scores = num_verses / max_verses
-        return num_verse_scores
-
-    def compute_sem_sim_scores(self, chapters):
-        sem_sim_scores = np.array(
-            [chapter.highlight_verses_df["score"].max() for chapter in chapters]
-        )
-        return sem_sim_scores
 
 
 class SemanticSimScoreReranker(Reranker):
@@ -65,3 +51,19 @@ class MaxVerseReranker(Reranker):
         num_verses = [chapter.get_num_unique_highlight_verse() for chapter in chapters]
 
         return sort_chapters(chapters, num_verses)
+
+
+def compute_num_verse_scores(chapters):
+    num_verses = np.array(
+        [chapter.get_num_unique_highlight_verse() for chapter in chapters]
+    )
+    max_verses = max(num_verses)
+    num_verse_scores = num_verses / max_verses
+    return num_verse_scores
+
+
+def compute_sem_sim_scores(chapters):
+    sem_sim_scores = np.array(
+        [chapter.highlight_verses_df["score"].max() for chapter in chapters]
+    )
+    return sem_sim_scores

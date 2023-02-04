@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 
 import streamlit as st
@@ -52,11 +53,19 @@ def main():
     # DEBUG st.write(bible_df)
 
     # Get user input
-    st.title("According to the Bible, ...")
-    query = st.text_input("", "is it ok for a believer to continue in sin?")
+    st.title("Verse Similarity Search")
+    st.markdown(
+        "Have you ever been stumped by a verse and wondered what other related things the Bible says about the topic? This tool was made just for that!"
+    )
+    query = st.text_input(
+        "Put a verse's text here to find related verses...",
+        "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
+    )
 
     if query:
         with st.spinner("Searching..."):
+
+            start = time.time()
 
             # Retrieve and re-rank
             candidate_chapters = retriever.retrieve(query, n=n_candidates)
@@ -64,6 +73,12 @@ def main():
 
             # Trim because candidates can be more than the desired results
             final_chapter_results = candidate_chapters[:n_results]
+
+            # Display quick stats
+            st.markdown(
+                f"{len(final_chapter_results)} results found in {time.time()-start:.2f}s"
+            )
+            st.markdown("---")
 
             # Display results
             for chapter in final_chapter_results:
