@@ -32,11 +32,16 @@ class SemanticRetriever:
             threshold=self.threshold,
         )
 
+        # TODO: revisit this logic as some verses can have the same exact text
+        # For now, workaround is to drop duplicates
+        verse_candidates_df.drop_duplicates(subset="text", inplace=True)
+
         # Join back verse metadata
         verse_candidates_df = pd.merge(
             verse_candidates_df, self.bible_df, how="left", on="text"
         )
-        # DEBUG st.write(verse_candidates_df)
+        # DEBUG
+        # st.write(verse_candidates_df)
 
         chapter_candidates = self.extract_chapters_from_verses(
             self.bible_df, verse_candidates_df
@@ -91,9 +96,9 @@ class SemanticRetriever:
             # Keep track of the matched verses as highlight verses
             highlight_verses_df = pd.merge(
                 chapter_verses_df,
-                verse_results_df[["text", "score"]],
+                verse_results_df[["text", "score", "book", "chapter"]],
                 how="inner",
-                on="text",
+                on=["text", "book", "chapter"],
             )
 
             chapter = Chapter(
