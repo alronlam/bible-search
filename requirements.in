@@ -9,6 +9,6 @@ pydantic
 sentence-transformers==2.2.*
 sklearn
 sparse_dot_topn
-streamlit==1.8.*
+streamlit==1.17.*
 torch==1.13.*
 transformers==4.25.*

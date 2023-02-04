@@ -7,9 +7,7 @@
 altair==4.2.0
     # via streamlit
 attrs==22.1.0
-    # via
-    #   jsonschema
-    #   streamlit
+    # via jsonschema
 backports-zoneinfo==0.2.1
     # via
     #   pytz-deprecation-shim
@@ -72,8 +70,12 @@ jsonschema==4.17.3
     # via altair
 loguru==0.6.0
     # via -r requirements.in
+markdown-it-py==2.1.0
+    # via rich
 markupsafe==2.1.1
     # via jinja2
+mdurl==0.1.2
+    # via markdown-it-py
 mypy-extensions==0.4.3
     # via black
 nltk==3.8
@@ -133,6 +135,8 @@ pydantic==1.10.2
     # via -r requirements.in
 pydeck==0.8.0
     # via streamlit
+pygments==2.14.0
+    # via rich
 pympler==1.0.1
     # via streamlit
 pyrsistent==0.19.2
@@ -159,6 +163,8 @@ requests==2.28.1
     #   streamlit
     #   torchvision
     #   transformers
+rich==13.3.1
+    # via streamlit
 scikit-learn==1.0.2
     # via sentence-transformers
 scipy==1.7.3
@@ -180,7 +186,7 @@ smmap==5.0.0
     # via gitdb
 sparse-dot-topn==0.3.3
     # via -r requirements.in
-streamlit==1.8.1
+streamlit==1.17.0
     # via -r requirements.in
 threadpoolctl==3.1.0
     # via scikit-learn
@@ -220,7 +226,9 @@ typing-extensions==4.4.0
     #   huggingface-hub
     #   importlib-metadata
     #   jsonschema
+    #   markdown-it-py
     #   pydantic
+    #   rich
     #   streamlit
     #   torch
     #   torchvision

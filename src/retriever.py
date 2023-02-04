@@ -88,10 +88,19 @@ class SemanticRetriever:
             book = chapter_verses_df["book"].tolist()[0]
             chapter = chapter_verses_df["chapter"].tolist()[0]
 
+            # Keep track of the matched verses as highlight verses
+            highlight_verses_df = pd.merge(
+                chapter_verses_df,
+                verse_results_df[["text", "score"]],
+                how="inner",
+                on="text",
+            )
+
             chapter = Chapter(
                 book_name=book,
                 chapter_num=chapter,
                 verses_df=chapter_verses_df,
+                highlight_verses_df=highlight_verses_df,
             )
 
             chapters.append(chapter)

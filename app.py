@@ -5,13 +5,15 @@ import streamlit as st
 
 from src import bible_loader
 from src.embeddings import EmbeddingsManager
-from src.reranker import Reranker
+from src.reranker import MaxVerseReranker, Reranker
 from src.retriever import Retriever, SemanticRetriever
 
 
 def display_chapter(chapter):
-    # TODO
-    st.write(str(chapter))
+    st.header(f"[{str(chapter)}]({chapter.get_biblegateway_url()})")
+    chapter_text = chapter.get_formatted_text()
+    st.markdown(chapter_text, unsafe_allow_html=True)
+    # st.write(chapter.highlight_verses_df)
 
 
 def main():
@@ -38,7 +40,7 @@ def main():
     )
 
     retriever = SemanticRetriever(bible_df, embeddings_manager)
-    reranker = Reranker()
+    reranker = MaxVerseReranker()
 
     # DEBUG st.write(bible_df)
 
@@ -59,6 +61,7 @@ def main():
             # Display results
             for chapter in final_chapter_results:
                 display_chapter(chapter)
+                st.markdown("---")
 
 
 if __name__ == "__main__":
