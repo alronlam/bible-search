@@ -12,11 +12,17 @@ def load_bible(metadata_csv, verses_csv):
     df = pd.merge(verses_df, metadata_df, on="b")
     df = df.fillna("")  # Some verses are blank in some versions
 
-    df = df[["n", "c", "v", "t_x"]]
+    df = df[["n", "c", "v", "t_x", "t_y"]]
 
     # The data sources used have this convention in the columns.
     # Renaming them here for ease of remembrance.
-    col_rename = {"n": "book", "c": "chapter", "v": "verse", "t_x": "text"}
+    col_rename = {
+        "t_y": "testament",
+        "n": "book",
+        "c": "chapter",
+        "v": "verse",
+        "t_x": "text",
+    }
     df = df.rename(columns=col_rename)
 
     # Create a human-friendly string of specifying a verse (e.g. Genesis 1:1)

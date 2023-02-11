@@ -22,17 +22,27 @@ def display_chapter(chapter):
     # st.write(chapter.highlight_verses_df)
 
 
+def config():
+    n_results = st.sidebar.slider("Maximum Results?", 5, 30, 10)
+    # bible_version = st.sidebar.selectbox("Bible Version", ["NIV", "ESV"]) # TODO
+    bible_version = "NIV"
+    new_testament = st.sidebar.checkbox("Search New Testament?", True)
+    old_testament = st.sidebar.checkbox("Search Old Testament?", False)
+
+    return n_results, new_testament, old_testament, bible_version
+
+
 def main():
+
+    n_results, new_testament, old_testament, bible_version = config()
 
     # Config
     ROOT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
     DATA_DIR = ROOT_DIR / "data"
 
-    n_results = 10
     n_candidates = n_results * 2
     metadata_csv = DATA_DIR / "key_english.csv"
-    verses_csv = DATA_DIR / "NIV.csv"
-    bible_version = "NIV"
+    verses_csv = DATA_DIR / f"{bible_version}.csv"
 
     semantic_sim_model = "msmarco-distilbert-base-v4"
 
@@ -45,45 +55,85 @@ def main():
         texts=bible_df["text"].tolist(),
     )
 
-    retriever = SemanticRetriever(bible_df, embeddings_manager)
-    # reranker = MaxVerseReranker()
-    reranker = CombinedScoreAndNumberReranker()
-    # reranker = SemanticSimScoreReranker()
+    # Trim down search space if needed
+    if not new_testament:
+        bible_df = bible_df[bible_df["testament"] != "NT"]
+    if not old_testament:
+        bible_df = bible_df[bible_df["testament"] != "OT"]
 
-    # DEBUG st.write(bible_df)
+    if len(bible_df) == 0:
+        st.markdown("Please select at least one testament to search through. :)")
+    else:
+        retriever = SemanticRetriever(bible_df, embeddings_manager)
+        # reranker = MaxVerseReranker()
+        reranker = CombinedScoreAndNumberReranker()
+        # reranker = SemanticSimScoreReranker()
 
-    # Get user input
-    st.title("Verse Similarity Search")
-    st.markdown(
-        "Have you ever been stumped by a verse and wondered what other related things the Bible says about the topic? This tool was made just for that!"
-    )
-    query = st.text_input(
-        "Put a verse's text here to find related verses...",
-        "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
-    )
+        # DEBUG st.write(bible_df)
 
-    if query:
-        with st.spinner("Searching..."):
+        # Get user input
+        st.title("Verse Similarity Search")
+        st.markdown(
+            "- Have you ever been stumped by a verse and wondered what related things the Bible says about it?\n"
+            "- Or you vaguely recall a verse's idea, but can't recall the exact location?\n"
+            "- Or maybe you're just curious about what the Bible says about a topic?\n"
+            "This tool was made just for that!"
+        )
 
-            start = time.time()
+        st.markdown("---")
 
-            # Retrieve and re-rank
-            candidate_chapters = retriever.retrieve(query, n=n_candidates)
-            candidate_chapters = reranker.rerank(candidate_chapters)
+        demo_query = st.selectbox(
+            "Try some demo queries...",
+            [
+                "",
+                "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
+                "In the same way, faith by itself, if it is not accompanied by action, is dead.",
+                "I tell you the truth, no one can enter the kingdom of God unless he is born of water and the Spirit.",
+                "the Lord is patient with us, not wanting us to perish",
+                "is it ok for believers to continue in sin?",
+                "it is possible to resist every temptation",
+                "the old is gone, the new has come",
+                "suffering for Christ",
+                "rejoicing in trials",
+                "Be careful of false prophets, wolves in sheep skin",
+                "will there be marriage in heaven?",
+            ],
+            index=1,
+        )
 
-            # Trim because candidates can be more than the desired results
-            final_chapter_results = candidate_chapters[:n_results]
+        query = st.text_area(
+            "Or put a verse's text here to find related verses",
+            demo_query if demo_query.strip() else ""
+            # "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
+        )
 
-            # Display quick stats
-            st.markdown(
-                f"{len(final_chapter_results)} results found in {time.time()-start:.2f}s"
-            )
-            st.markdown("---")
+        # Query should always override the demo text if it's non-empty
+        query = query if query.strip() else demo_query
 
-            # Display results
-            for chapter in final_chapter_results:
-                display_chapter(chapter)
+        clicked_search = st.button("Search", type="primary")
+
+        if query or clicked_search:
+            with st.spinner("Searching..."):
+
+                start = time.time()
+
+                # Retrieve and re-rank
+                candidate_chapters = retriever.retrieve(query, n=n_candidates)
+                candidate_chapters = reranker.rerank(candidate_chapters)
+
+                # Trim because candidates can be more than the desired results
+                final_chapter_results = candidate_chapters[:n_results]
+
+                # Display quick stats
+                st.markdown(
+                    f"_{len(final_chapter_results)} results found in {time.time()-start:.2f}s_"
+                )
                 st.markdown("---")
+
+                # Display results
+                for chapter in final_chapter_results:
+                    display_chapter(chapter)
+                    st.markdown("---")
 
 
 if __name__ == "__main__":
