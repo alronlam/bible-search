@@ -34,6 +34,8 @@ def config():
 
 def main():
 
+    st.set_page_config(page_title="Bible Search", layout="wide")
+
     n_results, new_testament, old_testament, bible_version = config()
 
     # Config
@@ -61,22 +63,22 @@ def main():
     if not old_testament:
         bible_df = bible_df[bible_df["testament"] != "OT"]
 
-    if len(bible_df) == 0:
-        st.markdown("Please select at least one testament to search through. :)")
-    else:
-        retriever = SemanticRetriever(bible_df, embeddings_manager)
-        # reranker = MaxVerseReranker()
-        reranker = CombinedScoreAndNumberReranker()
-        # reranker = SemanticSimScoreReranker()
+    # Initialize retriever and reranker based on filtered texts
+    retriever = SemanticRetriever(bible_df, embeddings_manager)
+    reranker = CombinedScoreAndNumberReranker()
+    # reranker = SemanticSimScoreReranker()
+    # reranker = MaxVerseReranker()
 
-        # DEBUG st.write(bible_df)
+    _, main_col, _ = st.columns([1, 2, 1])
+
+    with main_col:
 
         # Get user input
         st.title("Verse Similarity Search")
         st.markdown(
             "- Have you ever been stumped by a verse and wondered what related things the Bible says about it?\n"
-            "- Or you vaguely recall a verse's idea, but can't recall the exact location?\n"
-            "- Or maybe you're just curious about what the Bible says about a topic?\n"
+            "- Or you have a verse of interest and you simply want to find related ones?\n"
+            "- Or you vaguely recall a verse's idea, but can't recall the exact text?\n"
             "This tool was made just for that!"
         )
 
@@ -92,6 +94,7 @@ def main():
                 "the Lord is patient with us, not wanting us to perish",
                 "is it ok for believers to continue in sin?",
                 "it is possible to resist every temptation",
+                "heavenly rewards",
                 "the old is gone, the new has come",
                 "suffering for Christ",
                 "rejoicing in trials",
@@ -102,38 +105,40 @@ def main():
         )
 
         query = st.text_area(
-            "Or put a verse's text here to find related verses",
-            demo_query if demo_query.strip() else ""
-            # "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
+            "Or type a verse's text here to find similar verses",
+            demo_query if demo_query.strip() else "",
         )
-
-        # Query should always override the demo text if it's non-empty
-        query = query if query.strip() else demo_query
 
         clicked_search = st.button("Search", type="primary")
 
         if query or clicked_search:
-            with st.spinner("Searching..."):
 
-                start = time.time()
-
-                # Retrieve and re-rank
-                candidate_chapters = retriever.retrieve(query, n=n_candidates)
-                candidate_chapters = reranker.rerank(candidate_chapters)
-
-                # Trim because candidates can be more than the desired results
-                final_chapter_results = candidate_chapters[:n_results]
-
-                # Display quick stats
+            if len(bible_df) == 0:
                 st.markdown(
-                    f"_{len(final_chapter_results)} results found in {time.time()-start:.2f}s_"
+                    "---\n:red[Please select at least one testament to search through (left hand side of the screen). :)]"
                 )
-                st.markdown("---")
+            else:
+                with st.spinner("Searching..."):
 
-                # Display results
-                for chapter in final_chapter_results:
-                    display_chapter(chapter)
+                    start = time.time()
+
+                    # Retrieve and re-rank
+                    candidate_chapters = retriever.retrieve(query, n=n_candidates)
+                    candidate_chapters = reranker.rerank(candidate_chapters)
+
+                    # Trim because candidates can be more than the desired results
+                    final_chapter_results = candidate_chapters[:n_results]
+
+                    # Display quick stats
+                    st.markdown(
+                        f"_{len(final_chapter_results)} results found in {time.time()-start:.2f}s_"
+                    )
                     st.markdown("---")
+
+                    # Display results
+                    for chapter in final_chapter_results:
+                        display_chapter(chapter)
+                        st.markdown("---")
 
 
 if __name__ == "__main__":
