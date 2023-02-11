@@ -47,6 +47,9 @@ class SemanticRetriever:
             threshold=self.threshold,
         )
 
+        if len(verse_candidates_df) == 0:
+            return []
+
         if self.cross_encoder_model is not None:
             verse_candidates_df = self.cross_encode(
                 query, verse_candidates_df["text"].tolist()
