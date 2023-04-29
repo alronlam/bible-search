@@ -28,5 +28,7 @@ Run the streamlit app:
 bash run_streamlit.sh
 ```
 
+Note: This will be slow the first time you run the app (on my machine, it takes ~20 minutes) as the code will pre-generate and cache embeddings for the Bible verses (not included in the repo as it is huge). This is a one-time operation, and the app uses this index to search quickly during runtime.
+
 # Data
 The CSV file of Bible verses were taken from this [website](https://my-bible-study.appspot.com/). The file is also included in the repo, so there is no need to manually download. But you can refer to this website if you want to use a different version.
