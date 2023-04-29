@@ -10,6 +10,9 @@ What does the Bible say about this or that? This tool was created to help find B
 # Local Dev
 
 One-time Setup:
+
+*Pre-requisite: Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) if you haven't.*
+
 ```
 make conda-env
 make setup

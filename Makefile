@@ -2,7 +2,7 @@
 -include .env
 
 conda-env:
-	mamba env create --prefix ./env -f environment.yml --no-default-packages
+	conda env create --prefix ./env -f environment.yml --no-default-packages
 
 setup:
 	pip install pip-tools==6.13.*
