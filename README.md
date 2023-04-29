@@ -24,3 +24,6 @@ Run the streamlit app:
 ```
 bash run_streamlit.sh
 ```
+
+# Data
+The CSV file of Bible verses were taken from this [website](https://my-bible-study.appspot.com/). The file is also included in the repo, so there is no need to manually download. But you can refer to this website if you want to use a different version.
