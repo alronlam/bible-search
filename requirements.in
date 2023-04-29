@@ -1,6 +1,14 @@
+black
 h5py
+isort
+loguru
 numpy
 pandas
-sentence-transformers
+protobuf~=3.19.0
+pydantic
+sentence-transformers==2.2.*
 sklearn
-streamlit
+sparse_dot_topn
+streamlit==1.17.*
+torch==1.13.*
+transformers==4.25.*
