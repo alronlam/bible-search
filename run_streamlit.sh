@@ -1,0 +1,1 @@
+export PYTHONPATH=. && streamlit run app.py
